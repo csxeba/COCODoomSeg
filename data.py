@@ -68,6 +68,7 @@ class COCODoomDataset:
                 ignores.add(ID)
                 category_index[ID]["ignore"] = True
                 # print(f"Ignoring class: {percent:>7.2%} ({category_index[ID]['name']})")
+                dropped += 1
             else:
                 category_index[ID]["ignore"] = False
 
