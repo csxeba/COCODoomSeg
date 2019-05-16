@@ -15,13 +15,12 @@ class Visualizer:
             x = x[0]
         if y.ndim == 4:
             y = y[0]
-        x = (x * 255).astype("uint8")
+
         segmentation = np.zeros_like(x, dtype="uint8")
-        for i in range(self.n_classes):
-            segmentation[y[..., i] > 0] = self.colors[i]
+        for i in range(1, self.n_classes):
+            segmentation[y[..., i] > 0.1] = self.colors[i]
         segmentation = np.ma.masked_array(segmentation, mask=segmentation == 0)
-        weighted = cv2.addWeighted(x, 0.5, segmentation, 0.5, 1.)
-        return weighted
+        return segmentation
 
 
 if __name__ == '__main__':
