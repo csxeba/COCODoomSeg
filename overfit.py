@@ -27,7 +27,6 @@ def fake_stream():
 
 
 model = fcnn.build(val_ds.num_classes)
-model.summary()
 
 stream = fake_stream()
 

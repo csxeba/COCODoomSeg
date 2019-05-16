@@ -76,7 +76,11 @@ class COCODoomDataset:
 
     def make_sample(self, image_id):
         meta = self.image_meta[image_id]
-        image = cv2.imread(os.path.join(self.root, meta["file_name"]))
+        image_path = os.path.join(self.root, meta["file_name"])
+        image = cv2.imread(image_path)
+        if image is None:
+            raise RuntimeError(f"No image found @ {image_path}")
+
         mask = np.zeros(image.shape[:2] + (self.num_classes+1,))
         for anno in self.index[image_id]:
             instance_mask = masking.get_mask(anno, image.shape[:2])
@@ -84,12 +88,12 @@ class COCODoomDataset:
             if category == 0:
                 continue
             mask[..., category][instance_mask] = 1
-        assert mask[..., 0].sum() == 0
+
         overlaps = mask.sum(axis=2)[..., None]
         overlaps[overlaps == 0] = 1
         mask /= overlaps
         mask[..., 0] = 1 - mask[..., 1:].sum(axis=2)
-        assert np.all(mask[..., 0] >= 0)
+
         return image, mask
 
     def stream(self, shuffle=True):
