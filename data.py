@@ -12,11 +12,20 @@ class COCODoomDataset:
 
     BACKGROUND_CLASS = 0
 
-    def __init__(self, root, subset, batch_size=16, class_frequency_threshold=0.01, ignored_classes=None):
+    def __init__(self,
+                 root,
+                 subset,
+                 version="standard",
+                 batch_size=16,
+                 class_frequency_threshold=0.01,
+                 ignored_classes=None):
+
         self.root = root
         self.batch_size = batch_size
 
-        data = json.load(open(os.path.join(root, f"run-{subset}.json")))
+        version_str = {"standard": "-", "full": "-full"}[version]
+
+        data = json.load(open(os.path.join(root, f"run{version_str}-{subset}.json")))
 
         self.index = defaultdict(list)
         for anno in data["annotations"]:
