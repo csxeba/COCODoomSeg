@@ -67,7 +67,6 @@ class COCODoomDataset:
             if percent < threshold or ID in ignores:
                 ignores.add(ID)
                 category_index[ID]["ignore"] = True
-                # print(f"Ignoring class: {percent:>7.2%} ({category_index[ID]['name']})")
                 dropped += 1
             else:
                 category_index[ID]["ignore"] = False
@@ -75,16 +74,10 @@ class COCODoomDataset:
         print(f"Dropped {dropped} classes due to low frequency.")
         return category_index, ignores
 
-    def make_sample(self, image_id):
-        meta = self.image_meta[image_id]
-        image_path = os.path.join(self.root, meta["file_name"])
-        image = cv2.imread(image_path)
-        if image is None:
-            raise RuntimeError(f"No image found @ {image_path}")
-
-        mask = np.zeros(image.shape[:2] + (self.num_classes+1,))
+    def _mask_sparse(self, image_shape, image_id):
+        mask = np.zeros(image_shape[:2] + (self.num_classes+1,))
         for anno in self.index[image_id]:
-            instance_mask = masking.get_mask(anno, image.shape[:2])
+            instance_mask = masking.get_mask(anno, image_shape[:2])
             category = self.classes[anno["category_id"]]
             if category == 0:
                 continue
@@ -94,10 +87,31 @@ class COCODoomDataset:
         overlaps[overlaps == 0] = 1
         mask /= overlaps
         mask[..., 0] = 1 - mask[..., 1:].sum(axis=2)
+        return mask
 
+    def _mask_dense(self, image_shape, image_id):
+        mask = np.zeros(image_shape[:2])
+        for anno in self.index[image_id]:
+            instance_mask = masking.get_mask(anno, image_shape[:2])
+            category = self.classes[anno["category_id"]]
+            if category == 0:
+                continue
+            mask[instance_mask] = category
+        return mask[..., None]
+
+    def make_sample(self, image_id, sparse_y=True):
+        meta = self.image_meta[image_id]
+        image_path = os.path.join(self.root, meta["file_name"])
+        image = cv2.imread(image_path)
+        if image is None:
+            raise RuntimeError(f"No image found @ {image_path}")
+        if sparse_y:
+            mask = self._mask_sparse(image.shape, image_id)
+        else:
+            mask = self._mask_dense(image.shape, image_id)
         return image, mask
 
-    def stream(self, shuffle=True):
+    def stream(self, shuffle=True, sparse_y=True):
         ids = np.array(sorted(self.index))
         N = len(ids)
 
@@ -107,7 +121,7 @@ class COCODoomDataset:
             for batch in (ids[start:start+self.batch_size] for start in range(0, N, self.batch_size)):
                 X, Y = [], []
                 for ID in batch:
-                    x, y = self.make_sample(ID)
+                    x, y = self.make_sample(ID, sparse_y)
                     X.append(x)
                     Y.append(y)
 

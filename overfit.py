@@ -14,9 +14,6 @@ np.random.seed(1337)
 NOW = datetime.datetime.now().strftime("%Y%m%d.%H%M%S")
 BATCH_SIZE = 8
 
-checkpoint_to = "/data/My Drive/artifactory/COCODoomSeg/checkpoint_{}.h5"
-
-# train_ds = data.COCODoomDataset("/data/Datasets/cocodoom", "train", BATCH_SIZE)
 val_ds = data.COCODoomDataset("/data/Datasets/cocodoom", "val", BATCH_SIZE)
 
 

@@ -1,7 +1,7 @@
 import keras
 
 
-def build(num_output_classes):
+def build(num_output_classes, sparse_y=True):
     inputs = keras.layers.Input((200, 320, 3))
 
     down_stage1 = keras.layers.Conv2D(8, 3, padding="same")(inputs)
@@ -72,8 +72,9 @@ def build(num_output_classes):
     classes = keras.layers.Conv2D(num_output_classes+1, 5, activation="softmax", padding="same")(x)
 
     model = keras.models.Model(inputs, classes)
-    model.compile("adam", keras.losses.categorical_crossentropy)
-    keras.utils.plot_model(model, "unet.png", show_shapes=True)
+    loss =  keras.losses.categorical_crossentropy if sparse_y else  keras.losses.sparse_categorical_crossentropy
+    model.compile("adam", loss)
+    # keras.utils.plot_model(model, "unet.png", show_shapes=True)
     return model
 
 
