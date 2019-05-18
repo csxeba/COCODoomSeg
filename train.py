@@ -1,7 +1,7 @@
 import datetime
 import os
 
-from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
+from keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, ReduceLROnPlateau
 
 import data
 from architecture import fcnn
@@ -25,7 +25,8 @@ callbacks = [
     ModelCheckpoint(checkpoint_to.format("latest")),
     ModelCheckpoint(checkpoint_to.format("best"), save_best_only=True),
     CSVLogger(os.path.join(artifactory, "training_log.csv")),
-    TensorBoard(os.path.join(artifactory, "tensorboard"), write_graph=False)
+    TensorBoard(os.path.join(artifactory, "tensorboard"), write_graph=False),
+    ReduceLROnPlateau(min_lr=1e-5, factor=0.25, patience=5, verbose=1)
 ]
 
 model.fit_generator(train_ds.stream(shuffle=True),
