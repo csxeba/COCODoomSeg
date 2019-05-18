@@ -42,8 +42,8 @@ vis = visualize.Visualizer(val_ds.num_classes)
 for xx, yy, pp in zip(x, y, pred):
     image = cv2.cvtColor((xx * 255).astype("uint8"), cv2.COLOR_BGR2RGB)
 
-    gt = vis.overlay_mask(xx, yy)
-    dt = vis.overlay_mask(xx, pp)
+    gt = vis.colorify_mask(xx, yy)
+    dt = vis.colorify_mask(xx, pp)
 
     fig, (l, r) = plt.subplots(1, 2, figsize=(9, 6))
     l.imshow(image)

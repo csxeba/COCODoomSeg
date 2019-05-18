@@ -17,7 +17,7 @@ if not os.path.exists(artifactory):
 
 train_ds = data.COCODoomDataset("/data/Datasets/cocodoom", "train", BATCH_SIZE)
 val_ds = data.COCODoomDataset("/data/Datasets/cocodoom", "val", BATCH_SIZE,
-                              ignored_classes=train_ds.ignores)
+                              ignored_class_ids=train_ds.ignores)
 
 model = fcnn.build(train_ds.num_classes)
 

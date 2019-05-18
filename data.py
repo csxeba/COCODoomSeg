@@ -13,75 +13,43 @@ class COCODoomDataset:
     BACKGROUND_CLASS = 0
 
     def __init__(self,
-                 root,
-                 subset,
+                 data,
+                 image_root,
                  version="standard",
                  batch_size=16,
-                 class_frequency_threshold=0.01,
-                 ignored_classes=None):
+                 ignored_class_ids=None):
 
-        self.root = root
+        self.root = image_root
         self.batch_size = batch_size
+        self.ignored_class_ids = ignored_class_ids or set()
 
-        version_str = {"standard": "-", "full": "-full"}[version]
+        version_str = {"standard": "", "full": "-full"}[version]
 
-        data = json.load(open(os.path.join(root, f"run{version_str}-{subset}.json")))
+        if not isinstance(data, dict):
+            data = json.load(open(data))
 
         self.index = defaultdict(list)
         for anno in data["annotations"]:
             self.index[anno["image_id"]].append(anno)
         self.image_meta = {meta["id"]: meta for meta in data["images"]}
-
-        if class_frequency_threshold or ignored_classes is not None:
-            class_frequency_threshold = class_frequency_threshold or 0.
-            categories, ignores = self._apply_class_frequency_threshold(
-                data["annotations"], data["categories"], class_frequency_threshold, ignored_classes)
-        else:
-            categories = {cat["id"]: cat for cat in data["categories"]}
-            ignores = None
-
-        self.ignores = ignores
         self.classes = {}
         self.num_classes = 1
-        for ID, category in categories.items():
-            if category["ignore"]:
+
+        for category in data["categories"]:
+            ID = category["id"]
+            if ID in self.ignored_class_ids:
                 self.classes[ID] = 0
             else:
                 self.classes[ID] = self.num_classes
                 self.num_classes += 1
 
-        print(f"{subset} num images :", len(data["images"]))
-        print(f"{subset} num annos  :", len(data["annotations"]))
-        print(f"{subset} num classes:", self.num_classes)
+        print(f"Num images :", len(data["images"]))
+        print(f"Num annos  :", len(data["annotations"]))
+        print(f"Num classes:", self.num_classes)
 
     @property
     def steps_per_epoch(self):
         return len(self.index) // self.batch_size
-
-    @staticmethod
-    def _apply_class_frequency_threshold(annotations, categories, threshold, ignores=None):
-        category_index = {cat["id"]: cat for cat in categories}
-        class_freqs = defaultdict(int)
-        N = 0
-        dropped = 0
-        if ignores is None:
-            ignores = set()
-
-        for anno in annotations:
-            class_freqs[anno["category_id"]] += 1
-            N += 1
-
-        for ID, freq in class_freqs.items():
-            percent = freq / N
-            if percent < threshold or ID in ignores:
-                ignores.add(ID)
-                category_index[ID]["ignore"] = True
-                dropped += 1
-            else:
-                category_index[ID]["ignore"] = False
-
-        print(f"Dropped {dropped} classes due to low frequency.")
-        return category_index, ignores
 
     def _mask_sparse(self, image_shape, image_id):
         mask = np.zeros(image_shape[:2] + (self.num_classes+1,))
@@ -120,8 +88,16 @@ class COCODoomDataset:
             mask = self._mask_dense(image.shape, image_id)
         return image, mask
 
-    def stream(self, shuffle=True, sparse_y=True):
-        ids = np.array(sorted(self.index))
+    def stream(self, shuffle=True, sparse_y=True, run=None, level=None):
+        meta_iterator = self.image_meta.values()
+        if run is not None:
+            criterion = "run{}".format(run)
+            meta_iterator = filter(lambda meta: criterion in meta["file_name"], meta_iterator)
+        if level is not None:
+            criterion = "map{:0>2}".format(level)
+            meta_iterator = filter(lambda meta: criterion in meta["file_name"], meta_iterator)
+
+        ids = sorted(meta["id"] for meta in meta_iterator)
         N = len(ids)
 
         while 1:
